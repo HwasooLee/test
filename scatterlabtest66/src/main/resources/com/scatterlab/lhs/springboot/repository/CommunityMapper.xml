@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.scatterlab.lhs.springboot.repository.CommunityMapper">
+
+    <select id="selectCommunityList" resultType="Community">
+        SELECT CB.ID
+              ,CB.TITLE
+              ,CB.CONTENTS
+              ,CB.HIT
+              ,CB.LIKED
+              ,CB.DISLIKED
+              ,(SELECT COUNT(1) FROM COMMUNITY_BASE WHERE UPR_ID=CB.ID) COMMENT_CNT
+              ,U.NICKNAME
+              ,U.PROFILE_PHOTO
+          FROM COMMUNITY_BASE CB
+              ,USER U
+         WHERE DEPTH=0
+           AND CB.REG_ID=U.ID
+         
+
+    </select>
+
+    <select id="selectCommunityById" resultType="Community">
+        SELECT CB.ID
+              ,CB.TITLE
+              ,CB.CONTENTS
+              ,CB.HIT
+              ,CB.LIKED
+              ,CB.DISLIKED
+              ,(SELECT COUNT(1) FROM COMMUNITY_BASE WHERE UPR_ID=CB.ID) COMMENT_CNT
+              ,U.NICKNAME
+              ,U.PROFILE_PHOTO
+          FROM COMMUNITY_BASE CB
+          	  ,USER U
+         WHERE CB.ID = #{id}
+         AND CB.REG_ID=U.ID
+    </select>
+    
+    <select id="selectCommentsById" resultType="Community">
+        	SELECT  COM.ID, COM.UPR_ID, COM.DEPTH, COM.CONTENTS, COM.LIKED, COM.DISLIKED, U.NICKNAME, U.PROFILE_PHOTO
+			FROM
+			(
+				SELECT ID, UPR_ID, DEPTH, CONTENTS, LIKED, DISLIKED, REG_ID, ID ORDERBY_NO
+				FROM COMMUNITY_BASE
+				WHERE UPR_ID=#{id}
+				UNION ALL
+				SELECT ID, UPR_ID, DEPTH, CONTENTS, LIKED, DISLIKED, REG_ID, UPR_ID ORDERBY_NO
+				FROM COMMUNITY_BASE 
+				WHERE UPR_ID IN (SELECT ID
+	                               FROM COMMUNITY_BASE
+	                              WHERE UPR_ID=#{id})
+            ) COM
+            , USER U
+            WHERE COM.REG_ID = U.ID
+			ORDER BY ORDERBY_NO, ID
+
+    </select>
+    
+
+    <delete id="deleteCommunity">
+      DELETE FROM COMMUNITY_BASE
+            WHERE ID = #{id}
+    </delete>
+    
+    <update id="updateLike">
+      UPDATE COMMUNITY_BASE SET LIKED = LIKED + 1
+            WHERE ID = #{id}
+    </update>
+    
+    <update id="updateDislike">
+      UPDATE COMMUNITY_BASE SET DISLIKED = DISLIKED + 1
+            WHERE ID = #{id}
+    </update>
+    
+	<insert id="insertCommunity">
+      INSERT INTO COMMUNITY_BASE(
+      							 DEPTH, 
+                                 TITLE, 
+                                 CONTENTS, 
+                                 HIT, 
+                                 LIKED,
+                                 DISLIKED, 
+                                 REG_ID
+                                 ) 
+                         VALUES (
+                                 0, 
+                                 #{title}, 
+                                 #{contents},
+                                 0,
+                                 0,
+                                 0,
+                                 #{regId}
+                                 )
+    </insert>
+    
+    <insert id="insertComments">
+      INSERT INTO COMMUNITY_BASE(
+      							 UPR_ID,
+      							 DEPTH, 
+                                 CONTENTS, 
+                                 HIT, 
+                                 LIKED,
+                                 DISLIKED, 
+                                 REG_ID
+                                 ) 
+                         VALUES (
+                                 #{uprId},
+                                 (SELECT DEPTH +1 FROM COMMUNITY_BASE WHERE ID=#{uprId}),  
+                                 #{contents},
+                                 0,
+                                 0,
+                                 0,
+                                 #{regId}
+                                 )
+    </insert>
+    
+    <update id="updateComments">
+	    UPDATE COMMUNITY_BASE SET TITLE = #{title}
+	                             ,CONTENTS = #{contents}
+	    WHERE ID = #{id}
+    </update>
+
+</mapper>
